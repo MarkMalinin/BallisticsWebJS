@@ -5,46 +5,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расчет траектории снаряда</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            color: #005792;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Контейнер для параметров и графика */
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            gap: 20px;
+        }
+
+        /* Стили для боковой панели параметров */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            width: 300px;
+            background-color: #e8f0f6;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"], input[type="range"] {
+            margin: 5px 0 10px;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #005792;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #003f5e;
+            }
+
+        /* Стили для графика */
+        #plot {
+            flex: 1;
+            height: 400px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+        }
+    </style>
 </head>
 <body>
     <h2>Расчет траектории снаряда</h2>
 
-    <label for="velocity">Начальная скорость (м/с):</label>
-    <input type="number" id="velocity" step="0.1"><br>
+    <div class="container">
+        <!-- Панель управления параметрами -->
+        <div class="controls">
+            <div class="form-group">
+                <label for="velocity">Начальная скорость (м/с):</label>
+                <input type="range" id="velocity" min="1" max="1000" step="0.1" oninput="updateValue('velocity', 'velocityValue')">
+                <output id="velocityValue">50</output>
+            </div>
 
-    <label for="mass">Масса снаряда (г):</label>
-    <input type="number" id="mass" step="0.1"><br>
+            <div class="form-group">
+                <label for="mass">Масса снаряда (г):</label>
+                <input type="range" id="mass" min="1" max="1000" step="1" oninput="updateValue('mass', 'massValue')">
+                <output id="massValue">500</output>
+            </div>
 
-    <label for="diameter">Диаметр снаряда (мм):</label>
-    <input type="number" id="diameter" step="0.1"><br>
+            <div class="form-group">
+                <label for="diameter">Диаметр снаряда (мм):</label>
+                <input type="range" id="diameter" min="1" max="100" step="0.1" oninput="updateValue('diameter', 'diameterValue')">
+                <output id="diameterValue">50</output>
+            </div>
 
-    <label for="angle">Угол (градусы):</label>
-    <input type="number" id="angle" step="0.1" min="0" max="90"><br>
+            <div class="form-group">
+                <label for="angle">Угол (градусы):</label>
+                <input type="range" id="angle" min="0" max="90" step="1" oninput="updateValue('angle', 'angleValue')">
+                <output id="angleValue">45</output>
+            </div>
 
-    <label for="height">Начальная высота (м):</label>
-    <input type="number" id="height" step="0.1" value="0"><br><br>
+            <div class="form-group">
+                <label for="height">Начальная высота (м):</label>
+                <input type="range" id="height" min="0" max="100" step="1" oninput="updateValue('height', 'heightValue')">
+                <output id="heightValue">0</output>
+            </div>
 
-    <button onclick="calculateTrajectory()">Рассчитать</button>
+            <button onclick="calculateTrajectory()">Рассчитать</button>
+        </div>
 
-    <div id="plot" style="width:100%;max-width:700px;height:400px;"></div>
+        <!-- Область для графика -->
+        <div id="plot"></div>
+    </div>
 
     <script>
-        const GRAVITY = 9.81;  // м/с^2
-        const AIR_DENSITY = 1.2;  // кг/м^3
+        const GRAVITY = 9.81;
+        const AIR_DENSITY = 1.2;
         const DRAG_COEFFICIENT = 0.295;
-        const TIME_STEP = 0.01;  // с
+        const TIME_STEP = 0.01;
+
+        function updateValue(id, outputId) {
+            document.getElementById(outputId).textContent = document.getElementById(id).value;
+        }
 
         function calculateTrajectory() {
             let velocity = parseFloat(document.getElementById('velocity').value);
-            let mass = parseFloat(document.getElementById('mass').value) / 1000;  // переводим из грамм в кг
-            let diameter = parseFloat(document.getElementById('diameter').value) / 1000;  // переводим из мм в метры
+            let mass = parseFloat(document.getElementById('mass').value) / 1000;
+            let diameter = parseFloat(document.getElementById('diameter').value) / 1000;
             let angleDeg = parseFloat(document.getElementById('angle').value);
             let height = parseFloat(document.getElementById('height').value);
 
-            if (isNaN(velocity) || isNaN(mass) || isNaN(diameter) || isNaN(angleDeg) || isNaN(height)) {
-                alert("Пожалуйста, заполните все поля корректно.");
-                return;
-            }
             if (velocity <= 0 || mass <= 0 || diameter <= 0 || angleDeg < 0 || angleDeg > 90) {
                 alert("Проверьте значения: скорость, масса и диаметр должны быть положительными, а угол - от 0 до 90.");
                 return;
@@ -52,7 +153,6 @@
 
             let crossSectionalArea = Math.PI * Math.pow(diameter / 2, 2);
             let angleRad = angleDeg * Math.PI / 180;
-
             let trajectory = calculateBallistics(velocity, mass, angleRad, crossSectionalArea, height);
             plotTrajectory(trajectory);
         }
@@ -60,20 +160,16 @@
         function calculateBallistics(initialVelocity, mass, angleRad, crossSectionalArea, initialHeight) {
             let velocityX = initialVelocity * Math.cos(angleRad);
             let velocityY = initialVelocity * Math.sin(angleRad);
-
             let positions = [];
             let dragConstants = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * crossSectionalArea / mass;
-
             let x = 0, y = initialHeight;
 
             while (y >= 0) {
                 positions.push({ x: x, y: y });
-
                 let speedSq = velocityX ** 2 + velocityY ** 2;
                 let dragForce = dragConstants * speedSq;
                 let accelerationX = -dragForce * velocityX / Math.sqrt(speedSq);
                 let accelerationY = -GRAVITY - dragForce * velocityY / Math.sqrt(speedSq);
-
                 velocityX += accelerationX * TIME_STEP;
                 velocityY += accelerationY * TIME_STEP;
                 x += velocityX * TIME_STEP;
