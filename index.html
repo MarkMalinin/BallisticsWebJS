@@ -1,41 +1,108 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расчет траектории снаряда</title>
-    <!-- Подключаем библиотеку Chart.js для графиков -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  </head>
-  <body>
-    <h1>Расчет траектории снаряда</h1>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h2>Расчет траектории снаряда</h2>
 
-    <!-- Поля ввода данных -->
-    <label
-      >Начальная скорость (м/с):
-      <input id="velocity" type="number" step="0.1" /></label
-    ><br />
-    <label
-      >Масса снаряда (г): <input id="mass" type="number" step="0.1" /></label
-    ><br />
-    <label
-      >Диаметр снаряда (мм):
-      <input id="diameter" type="number" step="0.1" /></label
-    ><br />
-    <label>Угол (градусы): <input id="angle" type="number" step="0.1" /></label
-    ><br />
-    <label
-      >Начальная высота (м):
-      <input id="height" type="number" step="0.1" value="0" /></label
-    ><br /><br />
+    <label for="velocity">Начальная скорость (м/с):</label>
+    <input type="number" id="velocity" step="0.1"><br>
 
-    <!-- Кнопка для запуска расчета -->
+    <label for="mass">Масса снаряда (г):</label>
+    <input type="number" id="mass" step="0.1"><br>
+
+    <label for="diameter">Диаметр снаряда (мм):</label>
+    <input type="number" id="diameter" step="0.1"><br>
+
+    <label for="angle">Угол (градусы):</label>
+    <input type="number" id="angle" step="0.1" min="0" max="90"><br>
+
+    <label for="height">Начальная высота (м):</label>
+    <input type="number" id="height" step="0.1" value="0"><br><br>
+
     <button onclick="calculateTrajectory()">Рассчитать</button>
 
-    <!-- Холст для графика -->
-    <canvas id="trajectoryChart" width="600" height="400"></canvas>
+    <div id="plot" style="width:100%;max-width:700px;height:400px;"></div>
 
-    <!-- Подключаем файл script.js -->
-    <script src="src/script.js"></script>
-  </body>
+    <script>
+        const GRAVITY = 9.81;  // м/с^2
+        const AIR_DENSITY = 1.2;  // кг/м^3
+        const DRAG_COEFFICIENT = 0.295;
+        const TIME_STEP = 0.01;  // с
+
+        function calculateTrajectory() {
+            let velocity = parseFloat(document.getElementById('velocity').value);
+            let mass = parseFloat(document.getElementById('mass').value) / 1000;  // переводим из грамм в кг
+            let diameter = parseFloat(document.getElementById('diameter').value) / 1000;  // переводим из мм в метры
+            let angleDeg = parseFloat(document.getElementById('angle').value);
+            let height = parseFloat(document.getElementById('height').value);
+
+            if (isNaN(velocity) || isNaN(mass) || isNaN(diameter) || isNaN(angleDeg) || isNaN(height)) {
+                alert("Пожалуйста, заполните все поля корректно.");
+                return;
+            }
+            if (velocity <= 0 || mass <= 0 || diameter <= 0 || angleDeg < 0 || angleDeg > 90) {
+                alert("Проверьте значения: скорость, масса и диаметр должны быть положительными, а угол - от 0 до 90.");
+                return;
+            }
+
+            let crossSectionalArea = Math.PI * Math.pow(diameter / 2, 2);
+            let angleRad = angleDeg * Math.PI / 180;
+
+            let trajectory = calculateBallistics(velocity, mass, angleRad, crossSectionalArea, height);
+            plotTrajectory(trajectory);
+        }
+
+        function calculateBallistics(initialVelocity, mass, angleRad, crossSectionalArea, initialHeight) {
+            let velocityX = initialVelocity * Math.cos(angleRad);
+            let velocityY = initialVelocity * Math.sin(angleRad);
+
+            let positions = [];
+            let dragConstants = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * crossSectionalArea / mass;
+
+            let x = 0, y = initialHeight;
+
+            while (y >= 0) {
+                positions.push({ x: x, y: y });
+
+                let speedSq = velocityX ** 2 + velocityY ** 2;
+                let dragForce = dragConstants * speedSq;
+                let accelerationX = -dragForce * velocityX / Math.sqrt(speedSq);
+                let accelerationY = -GRAVITY - dragForce * velocityY / Math.sqrt(speedSq);
+
+                velocityX += accelerationX * TIME_STEP;
+                velocityY += accelerationY * TIME_STEP;
+                x += velocityX * TIME_STEP;
+                y += velocityY * TIME_STEP;
+            }
+
+            return positions;
+        }
+
+        function plotTrajectory(trajectory) {
+            let xData = trajectory.map(point => point.x);
+            let yData = trajectory.map(point => point.y);
+
+            let data = [{
+                x: xData,
+                y: yData,
+                mode: 'lines',
+                name: 'Траектория снаряда'
+            }];
+
+            let layout = {
+                title: 'Траектория снаряда',
+                xaxis: { title: 'Дальность (м)' },
+                yaxis: { title: 'Высота (м)' },
+                showlegend: true
+            };
+
+            Plotly.newPlot('plot', data, layout);
+        }
+    </script>
+</body>
 </html>
